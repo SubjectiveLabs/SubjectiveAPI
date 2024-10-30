@@ -79,10 +79,10 @@ GET /transport/stops
 
 ##### Path parameters
 
-| Name     | Type   | Required | Description                |
-| -------- | ------ | -------- | -------------------------- |
-| `id`     | string | Yes      | Route ID to find stops for |
-| `agency` | string | Yes      | ID of agency with route    |
+| Name     | Type   | Required | Description                      |
+| -------- | ------ | -------- | -------------------------------- |
+| `id`     | string | Yes      | Route ID to find stops for.      |
+| `agency` | string | Yes      | ID of the agency with the route. |
 
 ##### Responses
 
