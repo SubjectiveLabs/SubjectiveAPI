@@ -98,7 +98,7 @@ GET /transport/stops
   <summary>cURL</summary>
 
   ```nu
-  ❯ curl -s https://api.subjective.school/v1/transport/stops?id=2504_601&agency=GSBC004
+  ❯ curl -s https://api.subjective.school/v1/transport/stops?id=2504_601&agency=GSBC004 | from json | to json
   [
     {
       "id": "2155458",
@@ -118,6 +118,47 @@ GET /transport/stops
       "latitude": -33.686062,
       "longitude": 150.924602
     },
+    // ...
+  ]
+  ```
+
+</details>
+
+#### List departure times for stop
+
+Return departure times for a given stop ID.
+
+```plaintext
+GET /transport/times
+```
+
+##### Path parameters
+
+| Name | Type   | Required | Description                          |
+| ---- | ------ | -------- | ------------------------------------ |
+| `id` | string | Yes      | Stop ID to find departure times for. |
+
+##### Responses
+
+| Status | Description           |
+| ------ | --------------------- |
+| 200    | Success               |
+| 400    | Bad request           |
+| 500    | Internal server error |
+
+##### Examples
+
+<details>
+  <summary>cURL</summary>
+
+  ```nu
+  ❯ curl -s https://api.subjective.school/v1/transport/times?id=2155458 | from json | to json
+  [
+    "2024-11-01T10:35:00Z",
+    "2024-11-01T10:35:00Z",
+    "2024-11-01T10:42:00Z",
+    "2024-11-01T10:42:00Z",
+    "2024-11-01T10:45:00Z",
     // ...
   ]
   ```

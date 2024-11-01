@@ -12,7 +12,7 @@ use csv::Reader;
 use http::header::AUTHORIZATION;
 use itertools::Itertools;
 use reqwest::{Client, RequestBuilder};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::from_str;
 use tap::Pipe;
 use worker::{event, Context, Env, Request, Response, RouteContext, Router};
@@ -23,7 +23,8 @@ async fn fetch(request: Request, env: Env, _context: Context) -> worker::Result<
     set_once();
     let router = Router::new()
         .get_async("/v1/transport/routes", routes)
-        .get_async("/v1/transport/stops", stops);
+        .get_async("/v1/transport/stops", stops)
+        .get_async("/v1/transport/times", times);
     router.run(request, env).await
 }
 
@@ -269,4 +270,75 @@ async fn stops(request: Request, context: RouteContext<()>) -> worker::Result<Re
         };
         Response::from_json(&stops)
     }
+}
+
+struct TimesResult {
+    times: Vec<String>,
+}
+
+impl<'de> Deserialize<'de> for TimesResult {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Departures {
+            stop_events: Vec<StopEvent>,
+        }
+
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct StopEvent {
+            departure_time_planned: String,
+        }
+
+        let departures = Departures::deserialize(deserializer)?;
+        let times = departures
+            .stop_events
+            .into_iter()
+            .map(|stop_event| stop_event.departure_time_planned)
+            .collect();
+        Ok(Self { times })
+    }
+}
+
+async fn times(request: Request, context: RouteContext<()>) -> worker::Result<Response> {
+    let url = request.url()?;
+    let pairs: HashMap<_, _> = url
+        .query_pairs()
+        .map(|(key, value)| (key.to_string(), value.to_string()))
+        .collect();
+    let Some(id) = pairs.get("id") else {
+        return Response::error("Missing `id` parameter.", 400);
+    };
+    let Some(add_auth_header) = add_auth_header(&context.env) else {
+        return Response::error("Missing API key.", 500);
+    };
+    let response = match Client::new()
+        .get(format!(
+            "https://api.transport.nsw.gov.au/v1/tp/departure_mon?outputFormat=rapidJSON&coordOutputFormat=EPSG%3A4326&mode=direct&type_dm=stop&name_dm={id}&departureMonitorMacro=true&excludedMeans=checkbox&exclMOT_1=1&exclMOT_2=1&exclMOT_4=1&exclMOT_7=1&exclMOT_9=1&TfNSWDM=true&version=10.2.1.42"
+        ))
+        .pipe(add_auth_header)
+        .send()
+        .await
+    {
+        Ok(response) => response,
+        Err(error) => {
+            return Response::error(format!("Error while sending a request to the Transport Open Data 'Trip Planner APIs' API:\n\n{error:#?}"), 500);
+        }
+    };
+    let text = match response.text().await {
+        Ok(text) => text,
+        Err(error) => {
+            return Response::error(format!("Error while reading text from the response from the Transport Open Data 'Trip Planner APIs' API:\n\n{error:#?}"), 500);
+        }
+    };
+    let result: TimesResult = match from_str(&text) {
+        Ok(result) => result,
+        Err(error) => {
+            return Response::error(format!("Error while parsing JSON from the response from the Transport Open Data 'Trip Planner APIs' API:\n\n{error:#?}"), 500);
+        }
+    };
+    Response::from_json(&result.times)
 }

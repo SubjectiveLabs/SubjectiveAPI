@@ -1,3 +1,5 @@
+import { DateTime } from 'luxon';
+
 export type Route = {
     full_name: string,
     agency: string,
@@ -45,5 +47,10 @@ export class Client {
         return await (
             await fetch(`${this.baseUrl}/transport/stops?agency=${agencyId}&id=${routeId}`)
         ).json() as Stop[];
+    }
+
+    async listDepartureTimesForStop(stopId: string): Promise<DateTime[]> {
+        const newLocal = await fetch(`${this.baseUrl}/transport/times?id=${stopId}`);
+        return (await newLocal.json() as string[]).map((time: string) => DateTime.fromISO(time));
     }
 }
