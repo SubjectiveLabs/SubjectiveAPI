@@ -1,0 +1,12 @@
+[package]
+name = "macros"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+itertools = "0.14.0"
+quote = "1.0.38"
+syn = "2.0.94"
