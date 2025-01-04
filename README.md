@@ -164,3 +164,44 @@ GET /transport/times
   ```
 
 </details>
+
+### Icons
+
+#### Choose icon
+
+Return a list of suitable icons for a given subject name, up to 10 icons.
+
+```plaintext
+GET /icon/choose
+```
+
+##### Path parameters
+
+| Name   | Type   | Required | Description                    |
+| ------ | ------ | -------- | ------------------------------ |
+| `name` | string | Yes      | Subject name to match against. |
+
+##### Responses
+
+| Status | Description |
+| ------ | ----------- |
+| 200    | Success     |
+| 400    | Bad request |
+
+##### Examples
+
+<details>
+  <summary>cURL</summary>
+
+  ```nu
+  ❯ curl -s https://api.subjective.school/v1/icon/choose?name=science | from json | to json
+  [
+    "testtube2",
+    "atom",
+    "backpack.fill",
+    "globe.americas.fill",
+    "building.columns.fill"
+  ]
+  ```
+
+</details>
