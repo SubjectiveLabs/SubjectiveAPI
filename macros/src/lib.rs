@@ -12,38 +12,37 @@ pub fn load_icon_data(input: TokenStream) -> TokenStream {
         .map(|line| {
             let (name_len, rest) = line.split_once(' ').unwrap();
             let (name, icon) = rest.split_at(name_len.parse().unwrap());
-            let trigrams = name
+            let digrams = name
                 .bytes()
                 .tuple_windows()
-                .filter_map(|(a, b, c)| {
-                    [a, b, c]
+                .filter_map(|(a, b)| {
+                    [a, b]
                         .into_iter()
-                        .all(|byte| byte.is_ascii_alphabetic())
+                        .all(|byte| byte != b' ')
                         .then_some([
                             a.to_ascii_lowercase(),
                             b.to_ascii_lowercase(),
-                            c.to_ascii_lowercase(),
                         ])
                 })
                 .collect_vec();
-            (trigrams, icon)
+            (digrams, icon)
         })
         .collect_vec();
     let len = data.len();
-    let all_trigrams = data
+    let all_digrams = data
         .iter()
-        .flat_map(|(trigrams, _)| trigrams)
+        .flat_map(|(digrams, _)| digrams)
         .unique()
         .collect_vec();
-    let trigrams_len = all_trigrams.len();
+    let digrams_len = all_digrams.len();
     let all_icons = data.iter().map(|(_, icon)| icon).unique().collect_vec();
     let icons_len = all_icons.len();
     let data = data
         .iter()
-        .map(|(trigrams, icon)| {
-            let counts = all_trigrams
+        .map(|(digrams, icon)| {
+            let counts = all_digrams
                 .iter()
-                .map(|trigram| trigrams.contains(trigram))
+                .map(|digram| digrams.contains(digram))
                 .collect_vec();
             quote! {
                 (
@@ -53,12 +52,12 @@ pub fn load_icon_data(input: TokenStream) -> TokenStream {
             }
         })
         .collect_vec();
-    let all_trigrams = all_trigrams
+    let all_digrams = all_digrams
         .into_iter()
-        .map(|trigram| {
-            let [a, b, c] = trigram;
+        .map(|digram| {
+            let [a, b] = digram;
             quote! {
-                [#a, #b, #c]
+                [#a, #b]
             }
         })
         .collect_vec();
@@ -66,10 +65,10 @@ pub fn load_icon_data(input: TokenStream) -> TokenStream {
         static ICONS: [&'static str; #icons_len] = [
             #(#all_icons),*
         ];
-        static TRIGRAMS: [[u8; 3]; #trigrams_len] = [
-            #(#all_trigrams),*
+        static DIGRAMS: [[u8; 2]; #digrams_len] = [
+            #(#all_digrams),*
         ];
-        static ICON_DATA: [([bool; #trigrams_len], &'static str); #len] = [
+        static ICON_DATA: [([bool; #digrams_len], &'static str); #len] = [
             #(#data),*
         ];
     }

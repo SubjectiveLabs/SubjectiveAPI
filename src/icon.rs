@@ -25,24 +25,23 @@ fn classify(name: &str) -> Vec<&'static str> {
             (
                 name.bytes()
                     .tuple_windows()
-                    .filter_map(|(a, b, c)| {
-                        [a, b, c]
+                    .filter_map(|(a, b)| {
+                        [a, b]
                             .into_iter()
                             .all(|byte| byte.is_ascii_alphabetic())
                             .then_some([
                                 a.to_ascii_lowercase(),
                                 b.to_ascii_lowercase(),
-                                c.to_ascii_lowercase(),
                             ])
                     })
-                    .map(|trigram| {
+                    .map(|digram| {
                         (ICON_DATA
                             .iter()
                             .filter(|(vector, other)| {
                                 vector
                                     .iter()
-                                    .zip_eq(TRIGRAMS)
-                                    .any(|(contains, other)| other == trigram && *contains)
+                                    .zip_eq(DIGRAMS)
+                                    .any(|(contains, other)| other == digram && *contains)
                                     && other == icon
                             })
                             .count() as f32
