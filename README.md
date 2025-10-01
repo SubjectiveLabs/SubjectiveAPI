@@ -6,7 +6,7 @@ Most of the API does not need authentication and is open to the public.
 
 ## Endpoints
 
-Base URL is `https://api.subjective.school/v1`.
+Base URL is `https://api.subjective.school/`.
 
 ### Transport
 
@@ -15,7 +15,7 @@ Base URL is `https://api.subjective.school/v1`.
 Return routes that match a given route name such as `601`.
 
 ```plaintext
-GET /transport/routes
+GET /v1/transport/routes
 ```
 
 ##### Path parameters
@@ -74,7 +74,7 @@ GET /transport/routes
 Return stops for a given route ID and agency ID.
 
 ```plaintext
-GET /transport/stops
+GET /v1/transport/stops
 ```
 
 ##### Path parameters
@@ -126,17 +126,18 @@ GET /transport/stops
 
 #### List departure times for stop
 
-Return departure times for a given stop ID.
+Return departure times for a given stop ID. Returned delays are in seconds; positive indicates that the vehicle is late, negative indicates that the vehicle is early.
 
 ```plaintext
-GET /transport/times
+GET /v2/transport/times
 ```
 
 ##### Path parameters
 
-| Name | Type   | Required | Description                          |
-| ---- | ------ | -------- | ------------------------------------ |
-| `id` | string | Yes      | Stop ID to find departure times for. |
+| Name       | Type   | Required | Description                          |
+| ---------- | ------ | -------- | ------------------------------------ |
+| `stop_id`  | string | Yes      | Stop ID to find departure times for. |
+| `route_id` | string | Yes      | Route ID to filter by.               |
 
 ##### Responses
 
@@ -152,15 +153,32 @@ GET /transport/times
   <summary>cURL</summary>
 
   ```nu
-  ❯ curl -s https://api.subjective.school/v1/transport/times?id=2155458 | from json | to json
-  [
-    "2024-11-01T10:35:00Z",
-    "2024-11-01T10:35:00Z",
-    "2024-11-01T10:42:00Z",
-    "2024-11-01T10:42:00Z",
-    "2024-11-01T10:45:00Z",
-    // ...
-  ]
+  ❯ curl http://localhost:8787/v2/transport/times?stop_id=2155458&route_id=2504_601 | from json | to json
+  {
+    "times": [
+      {
+        "arrival": "2025-10-01T08:35:00Z",
+        "delay_sec": 0
+      },
+      {
+        "arrival": "2025-10-01T08:23:51Z",
+        "delay_sec": 231
+      },
+      {
+        "arrival": "2025-10-01T09:05:00Z",
+        "delay_sec": 0
+      },
+      {
+        "arrival": "2025-10-01T09:20:00Z",
+        "delay_sec": 0
+      },
+      {
+        "arrival": "2025-10-01T08:50:00Z",
+        "delay_sec": 0
+      }
+    ],
+    "updated_at": "2025-10-01T08:23:50Z"
+  }
   ```
 
 </details>
