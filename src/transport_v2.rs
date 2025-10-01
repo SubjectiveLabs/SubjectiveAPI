@@ -46,23 +46,46 @@ pub async fn times(request: Request, context: RouteContext<()>) -> worker::Resul
     {
         Ok(response) => response,
         Err(error) => {
-            return Response::error(format!("Error while sending a request to the Transport Open Data 'Public Transport - Realtime Trip Updates API' API:\n\n{error:#?}"), 500);
+            return Response::error(
+                format!(
+                    "Error while sending a request to the Transport Open Data 'Public Transport - Realtime Trip Updates API' API:\n\n{error:#?}"
+                ),
+                500,
+            );
         }
     };
     let bytes = match response.bytes().await {
         Ok(text) => text,
         Err(error) => {
-            return Response::error(format!("Error while reading bytes from the response from the Transport Open Data 'Public Transport - Realtime Trip Updates API' API:\n\n{error:#?}"), 500);
+            return Response::error(
+                format!(
+                    "Error while reading bytes from the response from the Transport Open Data 'Public Transport - Realtime Trip Updates API' API:\n\n{error:#?}"
+                ),
+                500,
+            );
         }
     };
     let Ok(message) = FeedMessage::decode(bytes) else {
-        return Response::error("Error while decoding the response from the Transport Open Data 'Public Transport - Realtime Trip Updates API' API.", 500);
+        return Response::error(
+            "Error while decoding the response from the Transport Open Data 'Public Transport - Realtime Trip Updates API' API.",
+            500,
+        );
     };
+    let mut latest = None;
     let times = message
         .entity
         .iter()
         .filter_map(|entity| {
             entity.trip_update.as_ref().map(|trip_update| {
+                #[allow(clippy::cast_possible_wrap)]
+                if let Some(updated) = trip_update
+                    .timestamp
+                    .map(|timestamp| timestamp as i64)
+                    .and_then(DateTime::from_timestamp_secs)
+                    && latest.is_none_or(|earliest| updated > earliest)
+                {
+                    latest = Some(updated);
+                }
                 trip_update.stop_time_update.iter().filter_map(|update| {
                     update
                         .arrival
@@ -87,14 +110,9 @@ pub async fn times(request: Request, context: RouteContext<()>) -> worker::Resul
         })
         .flatten()
         .collect_vec();
-    #[allow(clippy::cast_possible_wrap)]
     match to_string(&TimesResult {
         times,
-        updated_at: message
-            .header
-            .timestamp
-            .map(|timestamp| timestamp as i64)
-            .and_then(DateTime::from_timestamp_secs),
+        updated_at: latest,
     }) {
         Ok(json) => Response::ok(json),
         Err(error) => Response::error(
