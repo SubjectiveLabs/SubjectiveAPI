@@ -29,10 +29,7 @@ fn classify(name: &str) -> Vec<&'static str> {
                         [a, b]
                             .into_iter()
                             .all(|byte| byte.is_ascii_alphabetic())
-                            .then_some([
-                                a.to_ascii_lowercase(),
-                                b.to_ascii_lowercase(),
-                            ])
+                            .then_some([a.to_ascii_lowercase(), b.to_ascii_lowercase()])
                     })
                     .map(|digram| {
                         (ICON_DATA

@@ -5,14 +5,15 @@ use std::{
 };
 
 use csv::Reader;
-use http::header::AUTHORIZATION;
 use itertools::Itertools;
-use reqwest::{Client, RequestBuilder};
-use serde::{Deserialize, Deserializer, Serialize};
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
 use serde_json::from_str;
 use tap::Pipe;
-use worker::{Env, Request, Response, RouteContext};
+use worker::{Request, Response, RouteContext};
 use zip::ZipArchive;
+
+use crate::common::{add_auth_header, TimesResult};
 
 pub async fn routes(request: Request, context: RouteContext<()>) -> worker::Result<Response> {
     #[derive(Deserialize)]
@@ -79,14 +80,6 @@ pub async fn routes(request: Request, context: RouteContext<()>) -> worker::Resu
     Response::from_json(&result.routes)
 }
 
-fn add_auth_header(env: &Env) -> Option<impl FnOnce(RequestBuilder) -> RequestBuilder> {
-    env.secret("key").ok().map(|key| {
-        move |builder: RequestBuilder| {
-            builder.header(AUTHORIZATION, format!("apikey {key}").as_str())
-        }
-    })
-}
-
 #[allow(clippy::too_many_lines)]
 pub async fn stops(request: Request, context: RouteContext<()>) -> worker::Result<Response> {
     let url = request.url()?;
@@ -133,7 +126,7 @@ pub async fn stops(request: Request, context: RouteContext<()>) -> worker::Resul
         let mut buffer = Vec::new();
         if let Err(error) = file.read_to_end(&mut buffer) {
             return Err(Response::error(format!("Error while reading the '{name}' file from the Transport Open Data 'Public Transport - Timetables - For Realtime' API:\n\n{error:#?}"), 500));
-        };
+        }
         Ok(Reader::from_reader(Cursor::new(buffer)))
     };
     let trips = match read("trips.txt") {
@@ -255,37 +248,6 @@ pub async fn stops(request: Request, context: RouteContext<()>) -> worker::Resul
             }
         };
         Response::from_json(&stops)
-    }
-}
-
-struct TimesResult {
-    times: Vec<String>,
-}
-
-impl<'de> Deserialize<'de> for TimesResult {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        #[serde(rename_all = "camelCase")]
-        struct Departures {
-            stop_events: Vec<StopEvent>,
-        }
-
-        #[derive(Deserialize)]
-        #[serde(rename_all = "camelCase")]
-        struct StopEvent {
-            departure_time_planned: String,
-        }
-
-        let departures = Departures::deserialize(deserializer)?;
-        let times = departures
-            .stop_events
-            .into_iter()
-            .map(|stop_event| stop_event.departure_time_planned)
-            .collect();
-        Ok(Self { times })
     }
 }
 
