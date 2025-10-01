@@ -153,7 +153,7 @@ GET /v2/transport/times
   <summary>cURL</summary>
 
   ```nu
-  ❯ curl http://localhost:8787/v2/transport/times?stop_id=2155458&route_id=2504_601 | from json | to json
+  ❯ curl http://api.subjective.school/v2/transport/times?stop_id=2155458&route_id=2504_601 | from json | to json
   {
     "times": [
       {
